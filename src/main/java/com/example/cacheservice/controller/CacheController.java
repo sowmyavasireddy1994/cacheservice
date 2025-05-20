@@ -7,6 +7,7 @@ import com.example.cacheservice.exception.CacheException;
 import com.example.cacheservice.service.CacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -16,14 +17,22 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/cache")
 public class CacheController {
 
-    private static final Logger logger = LoggerFactory.getLogger(CacheController.class);
 
+
+    //private static final Logger logger = LoggerFactory.getLogger(CacheController.class);
+    Logger logger;
     private final CacheService cacheService;
 
-    public CacheController(CacheService cacheService) {
+    public CacheController(CacheService cacheService,Logger logger) {
         this.cacheService = cacheService;
+        this.logger=logger;
     }
 
+    @GetMapping("/test")
+    public String get() {
+        logger.info("Testing...");
+        return "Success";
+    }
     @PostMapping("/add")
     public MyEntityDTO add(@RequestBody MyEntityDTO dto) {
         logger.info("Adding entity to cache: {}", dto);
