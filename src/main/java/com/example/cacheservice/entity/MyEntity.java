@@ -1,6 +1,7 @@
 package com.example.cacheservice.entity;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
+
 import lombok.*;
 
 @Entity

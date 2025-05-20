@@ -16,13 +16,6 @@ import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-/**
- * This service maintains an LRU cache with expiration.
- * - Thread-safe via a ReentrantReadWriteLock.
- * - On capacity overflow, the least-used element is moved to the database.
- * - Entries have an expiration time; expired entries are periodically removed.
- * - For mutable entities, consider returning defensive copies in get() and add().
- */
 @Service
 public class CacheServiceImpl implements CacheService {
 
@@ -118,7 +111,6 @@ public class CacheServiceImpl implements CacheService {
             logger.info("All entities removed from cache and DB");
         } catch (Exception ex) {
             logger.error("Error removing all entities: {}", ex.getMessage());
-            // Not rethrowing to allow service to continue functioning
         } finally {
             rwLock.writeLock().unlock();
         }
@@ -138,12 +130,10 @@ public class CacheServiceImpl implements CacheService {
                 logger.info("Entity with id {} found in cache", e1.getId());
                 return entry.getEntity();
             } else {
-                // Remove if expired
                 if (entry != null && entry.isExpired(expirationMillis)) {
                     cacheMap.remove(e1.getId());
                 }
 
-                // Fetch from DB
                 Optional<MyEntity> fromDb = repository.findById(e1.getId());
                 if (fromDb.isPresent()) {
                     MyEntity entity = fromDb.get();
@@ -201,6 +191,8 @@ public class CacheServiceImpl implements CacheService {
             logger.info("Scheduler shut down on bean destruction.");
         }
     }
+
+    // ✅ Custom internal CacheEntry class (not Hibernate's!)
     private static class CacheEntry {
         private final MyEntity entity;
         private long lastAccessTime;

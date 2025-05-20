@@ -7,10 +7,8 @@ import com.example.cacheservice.service.CacheServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 
 import java.util.Optional;
 
@@ -23,7 +21,6 @@ public class CacheServiceImplTest {
     @Mock
     private MyEntityRepository repository;
 
-    @InjectMocks
     private CacheServiceImpl cacheService;
 
     private MyEntity entityWithoutId;
@@ -31,15 +28,12 @@ public class CacheServiceImplTest {
 
     @BeforeEach
     void setup() {
-        // By default maxSize is set by @Value("${cache.maxSize:5}")
-        // If needed, you can explicitly construct a new CacheServiceImpl with a given maxSize:
-        // cacheService = new CacheServiceImpl(repository, 5);
+        // Manually inject the dependencies to avoid InjectMocks constructor issue
+        cacheService = new CacheServiceImpl(repository, 5, 60000L);
 
-        // Entity without ID
         entityWithoutId = new MyEntity();
         entityWithoutId.setName("NoID");
 
-        // Entity with ID
         entityWithId = new MyEntity();
         entityWithId.setId(1L);
         entityWithId.setName("WithID");
@@ -57,7 +51,6 @@ public class CacheServiceImplTest {
 
         verify(repository).save(entityWithoutId);
 
-        // Should now be in cache
         MyEntity retrieved = cacheService.get(savedEntity);
         assertNotNull(retrieved);
         assertEquals(100L, retrieved.getId());
@@ -67,9 +60,7 @@ public class CacheServiceImplTest {
     @Test
     void testAddEntityWithId() throws CacheException {
         when(repository.save(entityWithId)).thenReturn(entityWithId);
-
         cacheService.add(entityWithId);
-
         verify(repository).save(entityWithId);
 
         MyEntity retrieved = cacheService.get(entityWithId);
@@ -82,24 +73,16 @@ public class CacheServiceImplTest {
     void testGetEntityFromCache() throws CacheException {
         when(repository.save(entityWithId)).thenReturn(entityWithId);
         cacheService.add(entityWithId);
-
-        // Should be retrieved from cache now
         MyEntity retrieved = cacheService.get(entityWithId);
         assertEquals(entityWithId.getId(), retrieved.getId());
-
-        // Repo should not be queried again since it's in cache
         verify(repository, never()).findById(entityWithId.getId());
     }
 
     @Test
     void testGetEntityFromDbWhenNotInCache() throws CacheException {
         when(repository.findById(entityWithId.getId())).thenReturn(Optional.of(entityWithId));
-
-        // Not added to cache first, so should fetch from DB
         MyEntity retrieved = cacheService.get(entityWithId);
         assertEquals(entityWithId.getId(), retrieved.getId());
-
-        // Now it should be cached. Subsequent get should not invoke DB.
         reset(repository);
         MyEntity retrievedAgain = cacheService.get(entityWithId);
         assertEquals(entityWithId.getId(), retrievedAgain.getId());
@@ -110,9 +93,7 @@ public class CacheServiceImplTest {
     void testGetNonExistingEntityThrowsException() {
         MyEntity nonExisting = new MyEntity();
         nonExisting.setId(999L);
-
         when(repository.findById(999L)).thenReturn(Optional.empty());
-
         assertThrows(CacheException.class, () -> cacheService.get(nonExisting));
     }
 
@@ -125,8 +106,6 @@ public class CacheServiceImplTest {
         cacheService.remove(entityWithId);
 
         verify(repository).deleteById(entityWithId.getId());
-
-        // Now getting should fail
         assertThrows(CacheException.class, () -> cacheService.get(entityWithId));
     }
 
@@ -139,10 +118,8 @@ public class CacheServiceImplTest {
     void testRemoveAll() throws CacheException {
         when(repository.save(entityWithId)).thenReturn(entityWithId);
         cacheService.add(entityWithId);
-
         cacheService.removeAll();
         verify(repository).deleteAll();
-
         assertThrows(CacheException.class, () -> cacheService.get(entityWithId));
     }
 
@@ -150,10 +127,7 @@ public class CacheServiceImplTest {
     void testClear() throws CacheException {
         when(repository.save(entityWithId)).thenReturn(entityWithId);
         cacheService.add(entityWithId);
-
         cacheService.clear();
-
-        // Cache is cleared, DB untouched. On get, it should fetch from DB
         when(repository.findById(entityWithId.getId())).thenReturn(Optional.of(entityWithId));
         MyEntity retrieved = cacheService.get(entityWithId);
         assertNotNull(retrieved);
@@ -161,12 +135,7 @@ public class CacheServiceImplTest {
 
     @Test
     void testCacheEviction() throws CacheException {
-        // Assume maxSize=5. Adding 6 entities should evict the oldest (id=1)
-        when(repository.save(any(MyEntity.class))).thenAnswer(invocation -> {
-            MyEntity entity = invocation.getArgument(0);
-            // Just return the entity with its ID as is, simulating a DB that doesn't change IDs.
-            return entity;
-        });
+        when(repository.save(any(MyEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         for (long i = 1; i <= 6; i++) {
             MyEntity ent = new MyEntity();
@@ -175,12 +144,8 @@ public class CacheServiceImplTest {
             cacheService.add(ent);
         }
 
-        // The first entity (id=1) should be evicted to DB.
-        // Try to get it back:
         MyEntity firstEntity = new MyEntity();
         firstEntity.setId(1L);
-
-        // Not in cache now, should try DB
         when(repository.findById(1L)).thenReturn(Optional.of(firstEntity));
         MyEntity retrieved = cacheService.get(firstEntity);
         assertNotNull(retrieved);

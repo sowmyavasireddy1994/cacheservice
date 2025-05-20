@@ -1,0 +1,13 @@
+com\example\cacheservice\config\SwaggerConfig$1.class
+com\example\cacheservice\controller\CacheController.class
+com\example\cacheservice\dto\MyEntityDTO.class
+com\example\cacheservice\service\CacheService.class
+com\example\cacheservice\exception\CacheException.class
+com\example\cacheservice\service\CacheServiceImpl$CacheEntry.class
+com\example\cacheservice\service\CacheServiceImpl.class
+com\example\cacheservice\config\SwaggerConfig.class
+com\example\cacheservice\repository\MyEntityRepository.class
+com\example\cacheservice\service\CacheServiceImpl$1.class
+com\example\cacheservice\exception\ResourceNotFoundException.class
+com\example\cacheservice\CacheserviceApplication.class
+com\example\cacheservice\entity\MyEntity.class
